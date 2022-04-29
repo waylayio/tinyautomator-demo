@@ -1,0 +1,41 @@
+{
+  "name": "edgeImpulseFoto",
+  "version": "1.0.12",
+  "type": "sensor",
+  "script": "// some comment\n\nconst {  LinuxImpulseRunner } = require(\"edge-impulse-linux\");\nconst sharp = require('sharp');\n\n// This script expects two arguments:\n// 1. The model file\n// 2. A features file with raw data. You can get this by going to **Live classification > Load sample**\n//    then copy the features from the 'Raw features' block.\n\n// tslint:disable-next-line: no-floating-promises\n\nconst { modelfile, imagefile } = options.requiredProperties\n\nasync function execute () {\n  let runner;\ntry {\n        // Load the model\n        runner = new LinuxImpulseRunner(modelfile);\n        let model = await runner.init();\n\n        console.log('Starting the custom classifier for',\n            model.project.owner + ' / ' + model.project.name, '(v' + model.project.deploy_version + ')');\n        console.log('Parameters', 'freq', model.modelParameters.frequency + 'Hz',\n            'window length', ((model.modelParameters.input_features_count / model.modelParameters.frequency) * 1000) + 'ms.',\n            'classes', model.modelParameters.labels);\n\n        console.log('Starting the image classifier for',\n            model.project.owner + ' / ' + model.project.name, '(v' + model.project.deploy_version + ')');\n        console.log('Parameters',\n            'image size', model.modelParameters.image_input_width + 'x' + model.modelParameters.image_input_height + ' px (' +\n            model.modelParameters.image_channel_count + ' channels)',\n            'classes', model.modelParameters.labels);\n\n                let resized = resizeImage(model, imagefile).then(resized => {\n                    runner.classify(resized.features).then(classifyRes =>{\n                        const state='classified'\n                        const classificationResult={};\n                        const value = {\n                          observedState: state,\n                          rawData: {\n                            result: classifyRes.result,\n                          }\n                        };\n\n                        send(null, value);\n                    });\n                   \n\n                });\n          await new Promise(resolve => setTimeout(resolve, 1000));\n\n        \n  } catch (error) {\n    console.error(error)\n    send(null, { observedState: 'error', rawData: { errorMessage: 'Failed to call url: ' + error } })\n  } finally {\n      if(runner){\n       \n        await runner.stop();\n        \n      }\n  }\n\n}\n\nasync function resizeImage(model, data) {\n    // resize image and add to frameQueue\n    let img;\n    let features = [];\n    if (model.modelParameters.image_channel_count === 3) {\n        img = sharp(data).resize({\n            height: model.modelParameters.image_input_height,\n            width: model.modelParameters.image_input_width,\n        });\n        let buffer = await img.raw().toBuffer();\n        for (let ix = 0; ix < buffer.length; ix += 3) {\n            let r = buffer[ix + 0];\n            let g = buffer[ix + 1];\n            let b = buffer[ix + 2];\n            // tslint:disable-next-line: no-bitwise\n            features.push((r << 16) + (g << 8) + b);\n        }\n    }\n    else {\n        img = sharp(data).resize({\n            height: model.modelParameters.image_input_height,\n            width: model.modelParameters.image_input_width\n        }).toColourspace('b-w');\n        let buffer = await img.raw().toBuffer();\n        for (let p of buffer) {\n            // tslint:disable-next-line: no-bitwise\n            features.push((p << 16) + (p << 8) + p);\n        }\n    }\n    return {\n        img: img,\n        features: features\n    };\n}\n\nexecute()\n\n",
+  "metadata": {
+    "author": "John Doe",
+    "iconURL": "",
+    "description": "",
+    "rawData": [
+      {
+        "dataType": "object",
+        "parameter": "result"
+      }
+    ],
+    "configuration": [
+      {
+        "name": "modelfile",
+        "type": "string",
+        "mandatory": true
+      },
+      {
+        "name": "imagefile",
+        "type": "string",
+        "mandatory": true
+      }
+    ],
+    "requiredProperties": [
+      "modelfile",
+      "imagefile"
+    ],
+    "supportedStates": [
+      "classified",
+      "error"
+    ]
+  },
+  "dependencies": {
+    "edge-impulse-linux": "^1.3.1",
+    "sharp": "0.29.3"
+  }
+}

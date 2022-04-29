@@ -1,0 +1,129 @@
+{
+  "sensors": [
+    {
+      "label": "debugDialog_3",
+      "name": "debugDialog",
+      "version": "1.0.2",
+      "properties": {
+        "message": "$${nodes.edgeImpulseFoto_1.rawData.result.bounding_boxes}"
+      },
+      "position": [
+        339,
+        311
+      ],
+      "dataTrigger": false,
+      "tickTrigger": true,
+      "timeout": "PT50S"
+    },
+    {
+      "label": "debugDialog_4",
+      "name": "debugDialog",
+      "version": "1.0.2",
+      "properties": {
+        "message": "$${nodes.script_1.rawData.numberOfCars}"
+      },
+      "position": [
+        192,
+        611
+      ],
+      "dataTrigger": false,
+      "tickTrigger": true,
+      "timeout": "PT50S"
+    },
+    {
+      "label": "edgeImpulseFoto_1",
+      "name": "edgeImpulseFoto",
+      "version": "1.0.12",
+      "properties": {
+        "modelfile": "/sandbox/plugs/${variables.modelname}",
+        "imagefile": "/sandbox/files/${streamdata.image}"
+      },
+      "resource": "$",
+      "position": [
+        81,
+        261
+      ],
+      "dataTrigger": true,
+      "tickTrigger": true,
+      "timeout": "PT1M"
+    },
+    {
+      "label": "script_1",
+      "name": "script",
+      "version": "2.0.1",
+      "properties": {
+        "script": "\nfunction example () { \nconst boxes=JSON.parse('$${nodes.edgeImpulseFoto_1.rawData.result.bounding_boxes}'); \nreturn { numberOfCars: boxes.length }\n}\n\n"
+      },
+      "position": [
+        196,
+        441
+      ],
+      "dataTrigger": false,
+      "tickTrigger": true,
+      "timeout": "PT50S"
+    },
+    {
+      "label": "storeMessage_1",
+      "name": "storeMessage",
+      "version": "1.0.1",
+      "properties": {
+        "payload": "${nodes.script_1.rawData}",
+        "resource": "parking1"
+      },
+      "position": [
+        457,
+        567
+      ],
+      "dataTrigger": false,
+      "tickTrigger": true,
+      "timeout": "PT50S"
+    }
+  ],
+  "triggers": [
+    {
+      "sourceLabel": "script_1",
+      "destinationLabel": "storeMessage_1",
+      "statesTrigger": [
+        "Success"
+      ]
+    },
+    {
+      "sourceLabel": "script_1",
+      "destinationLabel": "debugDialog_4",
+      "statesTrigger": [
+        "Success"
+      ]
+    },
+    {
+      "sourceLabel": "edgeImpulseFoto_1",
+      "destinationLabel": "debugDialog_3",
+      "statesTrigger": [
+        "classified"
+      ]
+    },
+    {
+      "sourceLabel": "edgeImpulseFoto_1",
+      "destinationLabel": "script_1",
+      "statesTrigger": [
+        "classified"
+      ]
+    }
+  ],
+  "name": "car parking count",
+  "user": "test@waylay.io",
+  "createTime": 1651132066162,
+  "lastUpdateTime": 1651132100790,
+  "discoveryTemplate": false,
+  "variables": [
+    {
+      "name": "modelname",
+      "displayName": "modelname",
+      "type": "string",
+      "mandatory": true,
+      "defaultValue": "cars.eim"
+    }
+  ],
+  "taskDefaults": {
+    "tags": {}
+  }
+}
